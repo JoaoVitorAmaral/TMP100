@@ -24,7 +24,6 @@ void I2Csetup();
 
 void TMP100_configuration(I2C_HandleTypeDef* i2c_instance, uint8_t TMP_resolution);
 float TMP100_readTemperature(I2C_HandleTypeDef* i2c_instance);
-float temperature = 0;
 
 int main(void)
 {
