@@ -17,12 +17,14 @@ uint16_t TMP100_TR = 0X00;
 uint16_t TMP100_CR = 0X01;
 uint16_t TMP_resolution12bits = 0x60;
 uint8_t temperatureData[2] = {0, 0};
+float temperatureRead = 0;
+float temperatureThresholdHigh = 27; //oC
 
 void setupLEDs();
 void I2Csetup();
 void TMP100_configuration(I2C_HandleTypeDef i2c_instance, uint16_t slaveAddress, uint16_t pointerRegister, uint16_t TMP_resolution);
 float TMP100_readTemperature(I2C_HandleTypeDef i2c_instance, uint16_t slaveAddress, uint16_t pointerRegister, uint16_t sizeOfBytes, uint8_t temperatureBytes, uint16_t nOfBytes);
-float temperatureRead = 0;
+
 int main(void)
 {
 	HAL_Init();
@@ -31,12 +33,21 @@ int main(void)
 	
 	TMP100_configuration(hI2C, TMP100_SAwrite, TMP100_CR, TMP_resolution12bits);
 	
-	for(; ;)
+	for(;;)
 	{
 		//Lê a temperatura e guarda em 2 bytes
-		HAL_I2C_Mem_Read(&hI2C, TMP100_SAread, TMP100_TR, 1, temperatureData, 2, HAL_MAX_DELAY);
-		
+		//HAL_I2C_Mem_Read(&hI2C, TMP100_SAread, TMP100_TR, 1, temperatureData, 2, HAL_MAX_DELAY);
+		//temperatureRead = (float)temperatureData[0] + (float)temperatureData[1] / 256;
 		temperatureRead = TMP100_readTemperature(hI2C, TMP100_SAwrite, TMP100_TR, 1, temperatureData, 2);
+		
+		if (temperatureRead > temperatureThresholdHigh)
+		{
+			HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_SET);
+		}
+		else
+		{
+			HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_RESET);
+		}
 	}
 }
 
@@ -82,14 +93,14 @@ void TMP100_configuration(I2C_HandleTypeDef i2c_instance, uint16_t slaveAddress,
 	HAL_I2C_Mem_Write(&i2c_instance, slaveAddress, pointerRegister, 1, &TMP_resolution, 1, HAL_MAX_DELAY);
 }
 
-float TMP100_readTemperature(I2C_HandleTypeDef i2c_instance, uint16_t slaveAddress, uint16_t pointerRegister, uint16_t sizeOfBytes,  uint8_t temperatureBytes, uint16_t nOfBytes)
+float TMP100_readTemperature(I2C_HandleTypeDef i2c_instance, uint16_t slaveAddress, uint16_t pointerRegister, uint16_t sizeOfBytes, uint8_t temperatureBytes, uint16_t nOfBytes)
 {
 	float temperature = 0;
 	//Lê a temperatura e guarda em 2 bytes
 	HAL_I2C_Mem_Read(&i2c_instance, slaveAddress, pointerRegister, sizeOfBytes, temperatureBytes, nOfBytes, HAL_MAX_DELAY);
 		
 	//Formata os dados do buffer TR do TMP100
-	temperature = (float)temperatureData[0] + ((float)temperatureData[1]) / 256;
+	temperature = (float)temperatureBytes[0] + ((float)temperatureBytes[1]) / 256;
 	
 	return temperature;
 }
